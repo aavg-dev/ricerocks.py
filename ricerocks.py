@@ -11,6 +11,12 @@ lives = 3
 time = 0
 started = False
 
+#rock variables
+STANDARD_BLUE = 1
+MEDIUM_BROWN = 2
+HARD_BLEND = 3
+MAX_ROCK_NUMBER = 12
+
 #globals for game
 rock_group = ([]) 
 missile_group = ([])
@@ -71,6 +77,10 @@ missile_image = simplegui.load_image("http://commondatastorage.googleapis.com/co
 # asteroid images - asteroid_blue.png, asteroid_brown.png, asteroid_blend.png
 asteroid_info = ImageInfo([45, 45], [90, 90], 40)
 asteroid_image_blue = simplegui.load_image("http://commondatastorage.googleapis.com/codeskulptor-assets/lathrop/asteroid_blue.png")
+
+asteroid_info = ImageInfo([45, 45], [90, 90], 40)
+asteroid_image_brown = simplegui.load_image("http://commondatastorage.googleapis.com/codeskulptor-assets/lathrop/asteroid_brown.png")
+
 
 # animated explosion - explosion_orange.png, explosion_blue.png, explosion_blue2.png, explosion_alpha.png
 explosion_info = ImageInfo([64, 64], [128, 128], 17, 24, True)
@@ -223,7 +233,100 @@ class Sprite:
     
     def get_radius(self):
         return self.radius
+
+# Rock class
+class Rock:
+    def __init__(self, pos, vel, ang, ang_vel, image, info, sound = None):
+        self.pos = [pos[0],pos[1]]
+        self.vel = [vel[0],vel[1]]
+        self.angle = ang
+        self.angle_vel = ang_vel
+        self.image = image
+        self.image_center = info.get_center()
+        self.image_size = info.get_size()
+        self.radius = info.get_radius()
+        self.lifespan = info.get_lifespan()
+        self.animated = info.get_animated()
+        self.age = 0
+        if sound:
+            sound.rewind()
+            sound.play()
+   
+    def draw(self, canvas):
+        #make things explode
+        if(self.animated == False):
+            canvas.draw_image(self.image, self.image_center, self.image_size,
+                          self.pos, self.image_size, self.angle)
+        elif(self.animated == True):
+            #if animated, as the explosions, add size[0] to center[0] depending on age
+            canvas.draw_image(self.image, [self.image_center[0]+self.image_size[0]*self.age,self.image_center[1]], self.image_size,
+                          self.pos, self.image_size, self.angle)
+            
+    def update(self):
+        # update angle
+        self.angle += self.angle_vel
         
+        # update position
+        self.pos[0] = (self.pos[0] + self.vel[0]) % WIDTH
+        self.pos[1] = (self.pos[1] + self.vel[1]) % HEIGHT
+        
+        #update age
+        self.age += 1
+        if(self.age >= self.lifespan):
+            return True
+        elif (self.age < self.lifespan):
+            return False
+        
+    def collide(self,other_object):
+        distance = dist(self.pos, other_object.get_position())
+        radius_sum = self.radius + other_object.get_radius()
+        if(distance > radius_sum):
+            return False
+        elif(distance <= radius_sum):
+            return True
+        
+    
+    def get_position(self):
+        return self.pos
+    
+    def get_radius(self):
+        return self.radius
+
+
+
+# RockFactory class
+class RockFactory:
+   
+    def createRock(type):
+        global rock_vel_multiplier
+        global score, timer_tick
+        global rock_group
+        rock_pos = self.getNextRockPosition()
+        if(score % 50 == 0 and timer_tick != 100 and score != 0):
+            timer_tick -= 50
+            rock_vel_multiplier += .6
+        rock_vel = [random.random() * rock_vel_multiplier - .3, random.random() * rock_vel_multiplier - .3]
+        rock_avel = random.random() * .2 - .1
+        new_rock = Rock(rock_pos, rock_vel, 0, rock_avel, asteroid_image_blue, asteroid_info)
+        rock_group.append(new_rock)
+        return new_rock
+        
+    def getNextRockPosition():
+        valid_position = False
+        while(valid_position == False):
+            rock_pos = [random.randrange(0, WIDTH), random.randrange(0, HEIGHT)]
+            #compute distance to check if rock is too close
+            distance = dist (rock_pos,my_ship.get_position())
+            if(distance > 2* my_ship.get_radius()):
+                    valid_position = True
+        return rock_pos
+
+            
+# create static method
+RockFactory.createRock = staticmethod(RockFactory.createRock)
+RockFactory.getNextRockPosition = staticmethod(RockFactory.getNextRockPosition)
+
+
 # key handlers to control ship   
 def keydown(key):
     if key == simplegui.KEY_MAP['left']:
@@ -313,21 +416,10 @@ def draw(canvas):
 
 # timer handler that spawns a rock    
 def rock_spawner():
-    global rock_vel_multiplier
-    global score, timer_tick
-    global rock_group
-    if(len (rock_group) < 12):
-        rock_pos = [random.randrange(0, WIDTH), random.randrange(0, HEIGHT)]
-        #compute distance to check if rock is too close
-        distance = dist (rock_pos,my_ship.get_position())
-        if(distance > 2* my_ship.get_radius()):
-            if(score % 50 == 0 and timer_tick != 100 and score != 0):
-                timer_tick -= 50
-                rock_vel_multiplier += .6
-            rock_vel = [random.random() * rock_vel_multiplier - .3, random.random() * rock_vel_multiplier - .3]
-            rock_avel = random.random() * .2 - .1
-            new_rock = Sprite(rock_pos, rock_vel, 0, rock_avel, asteroid_image_blue, asteroid_info)
-            rock_group.append(new_rock)
+    if(len (rock_group) < MAX_ROCK_NUMBER):
+        RockFactory.createRock(STANDARD_BLUE)
+
+
         
 def process_sprite_group(sprite_set,canvas):
     for element in set(sprite_set):
