@@ -288,7 +288,7 @@ def draw(canvas):
     process_sprite_group(missile_group,canvas)
     process_sprite_group(explosion_group,canvas)
     group_collide(rock_group,my_ship)
-    score += group_group_collide(rock_group,missile_group)
+    score += process_rocks_missile_colide(rock_group,missile_group)
     
         
     
@@ -348,19 +348,18 @@ def group_collide(group,other_object):
             explosion_group.append(new_explosion)
             lives -= 1
 
-def group_group_collide(group1,group2):
+def process_rocks_missile_colide(rocks,missiles):
     global score
     global explosion_group
-    #set group 1 rocks, group 2 missiles
     number_collisions = 0
-    for element1 in set(group1):
-        for element2 in set(group2):
-            collision = element1.collide(element2)
+    for rock in set(rocks):
+        for missile in set(missiles):
+            collision = rock.collide(missile)
             if(collision == True):
                 number_collisions += 1
-                group1.remove(element1)
-                group2.remove(element2)
-                new_explosion = Sprite(element1.get_position(), [0,0], 0, 0, explosion_image, explosion_info)
+                rocks.remove(rock)
+                missiles.remove(missile)
+                new_explosion = Sprite(rock.get_position(), [0,0], 0, 0, explosion_image, explosion_info)
                 explosion_group.append(new_explosion)
     return (number_collisions * 10)
                 
